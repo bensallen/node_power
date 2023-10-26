@@ -2,16 +2,15 @@ package node
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/bensallen/nodeset"
 	"github.com/bgentry/go-netrc/netrc"
-	"github.com/stmcginnis/gofish/redfish"
 	"github.com/urfave/cli/v2"
 	"github.com/valyala/fasthttp"
+	"github.com/valyala/fastjson"
 )
 
 func Status(c *cli.Context) error {
@@ -19,6 +18,18 @@ func Status(c *cli.Context) error {
 	netrcPath := c.String("netrc")
 	insecure := c.Bool("insecure")
 	timeout := c.Int64("timeout")
+	retry := c.Int("retry")
+	state := c.String("state")
+
+	if state != "" {
+		switch state {
+		case "On":
+		case "Off":
+		case "Failed":
+		default:
+			return fmt.Errorf("--state must be [On|Off|Failed]")
+		}
+	}
 
 	nr, err := netrc.ParseFile(netrcPath)
 	if err != nil {
@@ -28,11 +39,13 @@ func Status(c *cli.Context) error {
 	readTimeout := time.Duration(timeout * 1000000)
 	writeTimeout := time.Duration(timeout * 1000000)
 	maxIdleConnDuration, _ := time.ParseDuration("1h")
+
 	client := &fasthttp.Client{
-		ReadTimeout:              readTimeout,
-		WriteTimeout:             writeTimeout,
-		MaxIdleConnDuration:      maxIdleConnDuration,
-		NoDefaultUserAgentHeader: true, // Don't send: User-Agent: fasthttp
+		ReadTimeout:               readTimeout,
+		WriteTimeout:              writeTimeout,
+		MaxIdleConnDuration:       maxIdleConnDuration,
+		MaxIdemponentCallAttempts: retry,
+		NoDefaultUserAgentHeader:  true, // Don't send: User-Agent: fasthttp
 		Dial: (&fasthttp.TCPDialer{
 			Concurrency:      4096,
 			DNSCacheDuration: time.Hour,
@@ -55,10 +68,10 @@ func Status(c *cli.Context) error {
 		url.SetHost(s)
 
 		wg.Add(1)
-		go func(c *fasthttp.Client, u *fasthttp.URI) {
+		go func(c *fasthttp.Client, u *fasthttp.URI, f string) {
 			defer wg.Done()
-			getPowerState(client, url)
-		}(client, url)
+			getPowerState(c, u, f)
+		}(client, url, state)
 
 		return nil
 	}
@@ -75,34 +88,31 @@ func Status(c *cli.Context) error {
 	return nil
 }
 
-type SystemsCollection struct {
-	OdataID   string `json:"@odata.id"`
-	OdataType string `json:"@odata.type"`
-	Members   []struct {
-		OdataID string `json:"@odata.id"`
-	} `json:"Members"`
-	MembersOdataCount int    `json:"Members@odata.count"`
-	Name              string `json:"Name"`
-}
-
-func getPowerState(c *fasthttp.Client, url *fasthttp.URI) {
-	sc, err := getSystems(c, url)
+func getPowerState(c *fasthttp.Client, url *fasthttp.URI, filter string) {
+	sysLinks, err := getSystems(c, url)
 	if err != nil {
-		fmt.Printf("%s:%s\n", url.Host(), err)
-	}
-	for _, systemPath := range sc.Members {
-		url.SetPath(systemPath.OdataID)
-		cs, err := getSystem(c, url)
-		if err != nil {
-			fmt.Printf("%s:%s\n", url.Host(), err)
+		if filter == "" || filter == "Failed" {
+			fmt.Printf("%s: %s\n", url.Host(), err)
 		}
-		fmt.Printf("%s:%s\n", url.Host(), cs.PowerState)
+		return
+	}
+	for _, sysLink := range sysLinks {
+		url.SetPathBytes(sysLink)
+		powerState, err := getSystem(c, url)
+		if err != nil {
+			if filter == "" || filter == "Failed" {
+				fmt.Printf("%s: %s\n", url.Host(), err)
+			}
+			return
+		}
+		if filter == "" || powerState == filter {
+			fmt.Printf("%s: %s\n", url.Host(), powerState)
+		}
 	}
 	fasthttp.ReleaseURI(url)
 }
 
-func getSystems(c *fasthttp.Client, u *fasthttp.URI) (SystemsCollection, error) {
-
+func getSystems(c *fasthttp.Client, u *fasthttp.URI) ([][]byte, error) {
 	u.SetPath("/redfish/v1/Systems/")
 	req := fasthttp.AcquireRequest()
 	req.SetURI(u)
@@ -113,17 +123,28 @@ func getSystems(c *fasthttp.Client, u *fasthttp.URI) (SystemsCollection, error) 
 	fasthttp.ReleaseRequest(req)
 
 	if err != nil {
-		return SystemsCollection{}, fmt.Errorf("connection error: %v\n", err)
+		return [][]byte{}, fmt.Errorf("connection error: %v", err)
 	}
-	sc := SystemsCollection{}
-	json.Unmarshal(resp.Body(), &sc)
 
-	return sc, nil
+	var p fastjson.Parser
+	v, err := p.ParseBytes(resp.Body())
+	if err != nil {
+		return [][]byte{}, fmt.Errorf("error unmarshaling JSON body: %v", err)
+	}
+	members := v.GetArray("Members")
+	if members == nil || len(members) == 0 {
+		return [][]byte{}, fmt.Errorf("error unmarshaling JSON, members not found: %v", err)
+	}
+
+	links := [][]byte{}
+	for _, member := range members {
+		links = append(links, member.GetStringBytes("@odata.id"))
+	}
+
+	return links, nil
 }
 
-func getSystem(c *fasthttp.Client, u *fasthttp.URI) (redfish.ComputerSystem, error) {
-	cs := redfish.ComputerSystem{}
-
+func getSystem(c *fasthttp.Client, u *fasthttp.URI) (string, error) {
 	req := fasthttp.AcquireRequest()
 	req.SetURI(u)
 
@@ -133,12 +154,15 @@ func getSystem(c *fasthttp.Client, u *fasthttp.URI) (redfish.ComputerSystem, err
 	fasthttp.ReleaseRequest(req)
 
 	if err != nil {
-		return redfish.ComputerSystem{}, fmt.Errorf("connection error: %v\n", err)
+		return "", fmt.Errorf("connection error: %v", err)
 	}
 
-	if err := json.Unmarshal(resp.Body(), &cs); err != nil {
-		return redfish.ComputerSystem{}, fmt.Errorf("error unmarshaling JSON body: %v\n", err)
+	var p fastjson.Parser
+	v, err := p.ParseBytes(resp.Body())
+	if err != nil {
+		return "", fmt.Errorf("error unmarshaling JSON body: %v", err)
 	}
+	powerState := v.GetStringBytes("PowerState")
 
-	return cs, nil
+	return string(powerState), nil
 }

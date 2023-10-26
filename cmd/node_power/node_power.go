@@ -42,6 +42,12 @@ func main() {
 				Usage:   "Timeout to wait for connections (ms)",
 				Value:   500,
 			},
+			&cli.IntFlag{
+				Name:    "retry",
+				Aliases: []string{"r"},
+				Usage:   "Retry attempts for each HTTP request",
+				Value:   3,
+			},
 		},
 		Commands: []*cli.Command{
 			{
@@ -50,7 +56,7 @@ func main() {
 				Action: node.Status,
 				Flags: []cli.Flag{
 					&cli.StringSliceFlag{Name: "node", Aliases: []string{"n"}, Required: true, Usage: "list of node with support for node ranges, and can be specified multiple times"},
-					&cli.StringFlag{Name: "status", Aliases: []string{"s"}, Usage: "filter output based on status of node: on, off", Value: ""},
+					&cli.StringFlag{Name: "state", Aliases: []string{"s"}, Usage: "filter output based on state of node: [On, Off]", Value: ""},
 				},
 			},
 			{
