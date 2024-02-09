@@ -19,3 +19,5 @@ require (
 	github.com/valyala/fastjson v1.6.4
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 )
+
+replace github.com/bgentry/go-netrc => github.com/bensallen/go-netrc v0.0.0-20240208233842-0f11665fc14d
