@@ -1,5 +1,5 @@
-github.com/bensallen/go-netrc v0.0.0-20240208233842-0f11665fc14d h1:b2EoVRINjxomOPIzYd959h2RbIfhSQAX0vocHy/r1QY=
-github.com/bensallen/go-netrc v0.0.0-20240208233842-0f11665fc14d/go.mod h1:7HDAQMwqTI1pNbx+F5cPtYEt5VE1ro5MNjsvhUgzBDE=
+github.com/bensallen/go-netrc v0.0.0-20261113211723-644c0042b4b1 h1:EBihYVuQg+65J8MA8A24w1luqC1oXfiMDv1cRa5zpjQ=
+github.com/bensallen/go-netrc v0.0.0-20261113211723-644c0042b4b1/go.mod h1:7HDAQMwqTI1pNbx+F5cPtYEt5VE1ro5MNjsvhUgzBDE=
 github.com/bensallen/nodeset v0.0.0-20260928174813-dd1052c7fdcd h1:K4XimqkR3oStot+AYDOnVe0D51koUw/+sClk6ALC1hE=
 github.com/bensallen/nodeset v0.0.0-20260928174813-dd1052c7fdcd/go.mod h1:7oOxlVwKzHudainDsYIsR0+wnA7cXHAHbCKlJoftppE=
 github.com/cpuguy83/go-md2man/v2 v2.0.7 h1:zbFlGlXEAKlwXpmvle3d8Oe3YnkKIK4xSRTd3sHPnBo=

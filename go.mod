@@ -23,4 +23,4 @@ require (
 // TODO: repoint at a bensallen/go-netrc pseudo-version once the
 // findmachine_index branch is pushed. The local path is here for the
 // FindMachine lookup index.
-replace github.com/bgentry/go-netrc => /home/bsallen/Development/3rd_Party/go-netrc
+replace github.com/bgentry/go-netrc => github.com/bensallen/go-netrc v0.0.0-20261113211723-644c0042b4b1
