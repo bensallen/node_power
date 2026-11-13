@@ -1,23 +1,26 @@
 module github.com/bensallen/node_power
 
-go 1.21.3
+go 1.26.0
 
-require github.com/urfave/cli/v2 v2.25.7
+require github.com/urfave/cli/v2 v2.27.7
 
 require (
-	github.com/andybalholm/brotli v1.0.5 // indirect
-	github.com/klauspost/compress v1.16.3 // indirect
+	github.com/klauspost/compress v1.20.1 // indirect
+	github.com/molecule-man/go-brrr v1.0.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 )
 
 require (
-	github.com/bensallen/nodeset v0.0.0-20231025164848-156f3e4b3fd1
+	github.com/bensallen/nodeset v0.0.0-20260928174813-dd1052c7fdcd
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d
-	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/valyala/fasthttp v1.50.0
-	github.com/valyala/fastjson v1.6.4
-	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+	github.com/valyala/fasthttp v1.74.0
+	github.com/valyala/fastjson v1.6.10
+	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 )
 
-replace github.com/bgentry/go-netrc => github.com/bensallen/go-netrc v0.0.0-20240208233842-0f11665fc14d
+// TODO: repoint at a bensallen/go-netrc pseudo-version once the
+// findmachine_index branch is pushed. The local path is here for the
+// FindMachine lookup index.
+replace github.com/bgentry/go-netrc => /home/bsallen/Development/3rd_Party/go-netrc
